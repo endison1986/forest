@@ -6,12 +6,12 @@
 
     <groupId>com.dtflys.forest</groupId>
     <artifactId>forest-spring-boot-starter</artifactId>
-    <version>1.5.19</version>
+    <version>1.5.19_M1</version>
 
     <parent>
         <groupId>com.dtflys.forest</groupId>
         <artifactId>forest</artifactId>
-        <version>1.5.19</version>
+        <version>1.5.19_M1</version>
     </parent>
 
     <dependencyManagement>
@@ -137,6 +137,4 @@
             </plugin>
         </plugins>
     </build>
-
-
 </project>

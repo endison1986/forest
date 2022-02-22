@@ -6,12 +6,12 @@
 
     <groupId>com.dtflys.forest</groupId>
     <artifactId>forest-spring</artifactId>
-    <version>1.5.19</version>
+    <version>1.5.19_M1</version>
 
     <parent>
         <groupId>com.dtflys.forest</groupId>
         <artifactId>forest</artifactId>
-        <version>1.5.19</version>
+        <version>1.5.19_M1</version>
     </parent>
 
     <dependencies>
@@ -115,8 +115,5 @@
             <version>${protobuf.version}</version>
             <scope>test</scope>
         </dependency>
-
     </dependencies>
-
-
 </project>
