@@ -15,6 +15,7 @@ import com.dtflys.forest.reflection.MetaRequest;
 
 import java.lang.annotation.Annotation;
 import java.lang.invoke.MethodHandles;
+import java.lang.invoke.MethodHandles.Lookup;
 import java.lang.reflect.Constructor;
 import java.lang.reflect.InvocationHandler;
 import java.lang.reflect.Method;
@@ -44,7 +45,7 @@ public class InterfaceProxyHandler<T> implements InvocationHandler, VariableScop
 
     private LogConfiguration baseLogConfiguration;
 
-    private final MethodHandles.Lookup defaultMethodLookup;
+    private final Lookup defaultMethodLookup;
 
     private final List<Annotation> baseAnnotations = new LinkedList<>();
 
@@ -59,15 +60,25 @@ public class InterfaceProxyHandler<T> implements InvocationHandler, VariableScop
         this.interfaceClass = interfaceClass;
         this.interceptorFactory = configuration.getInterceptorFactory();
 
+        Lookup methodLookup;
         try {
-            Constructor<MethodHandles.Lookup> defaultMethodConstructor = MethodHandles.Lookup.class.getDeclaredConstructor(Class.class, int.class);
-            if (!defaultMethodConstructor.isAccessible()) {
-                defaultMethodConstructor.setAccessible(true);
+            try {
+                Method privateLookupIn = MethodHandles.class.getMethod("privateLookupIn", Class.class, Lookup.class);
+                methodLookup = (Lookup) privateLookupIn.invoke(null, interfaceClass, MethodHandles.lookup());
+            } catch (NoSuchMethodException e) {
+                try {
+                    Constructor<Lookup> lookup = Lookup.class.getDeclaredConstructor(Class.class, int.class);
+                    lookup.setAccessible(true);
+                    methodLookup = lookup.newInstance(interfaceClass, Lookup.PRIVATE);
+                } catch (NoSuchMethodException e2) {
+                    throw new ForestRuntimeException(e2);
+                }
             }
-            defaultMethodLookup = defaultMethodConstructor.newInstance(interfaceClass, MethodHandles.Lookup.PRIVATE);
         } catch (Throwable e) {
             throw new ForestRuntimeException(e);
         }
+
+        this.defaultMethodLookup = methodLookup;
         prepareBaseInfo();
         initMethods();
     }
@@ -140,7 +151,7 @@ public class InterfaceProxyHandler<T> implements InvocationHandler, VariableScop
         Method[] methods = clazz.getDeclaredMethods();
         for (int i = 0; i < methods.length; i++) {
             Method method = methods[i];
-            if(method.isDefault()){
+            if (method.isDefault()) {
                 continue;
             }
             ForestMethod forestMethod = new ForestMethod(this, configuration, method);
@@ -152,9 +163,9 @@ public class InterfaceProxyHandler<T> implements InvocationHandler, VariableScop
     /**
      * 调用 Forest 动态代理接口对象的方法
      *
-     * @param proxy 动态代理对象
+     * @param proxy  动态代理对象
      * @param method 所要调用的方法 {@link Method}对象
-     * @param args 所要调用方法的入参数组
+     * @param args   所要调用方法的入参数组
      * @return 方法调用返回结果
      * @throws Throwable 方法调用过程中可能抛出的异常
      */
@@ -162,7 +173,7 @@ public class InterfaceProxyHandler<T> implements InvocationHandler, VariableScop
     public Object invoke(Object proxy, Method method, Object[] args) throws Throwable {
         String methodName = method.getName();
         if (method.isDefault()) {
-          return invokeDefaultMethod(proxy, method, args);
+            return invokeDefaultMethod(proxy, method, args);
         }
         ForestMethod forestMethod = forestMethodMap.get(method);
         if (forestMethod == null) {
@@ -215,11 +226,11 @@ public class InterfaceProxyHandler<T> implements InvocationHandler, VariableScop
         return forestMethod.invoke(args);
     }
 
-  private Object invokeDefaultMethod(Object proxy, Method method, Object[] args)
-          throws Throwable {
-    return defaultMethodLookup.unreflectSpecial(method, interfaceClass)
-            .bindTo(proxy).invokeWithArguments(args);
-  }
+    private Object invokeDefaultMethod(Object proxy, Method method, Object[] args)
+            throws Throwable {
+        return defaultMethodLookup.unreflectSpecial(method, interfaceClass)
+                .bindTo(proxy).invokeWithArguments(args);
+    }
 
     public MetaRequest getBaseMetaRequest() {
         return baseMetaRequest;
